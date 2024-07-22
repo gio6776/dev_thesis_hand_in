@@ -1,0 +1,35 @@
+[
+    {
+        "table_id": "amazon_orders",
+        "question": "What is the YoY sales by Month for the Product Hiking Classic Socks?",
+        "query:": "with MonthlySales as ( select extract(year from purchase_date) as sales_year, extract(month from purchase_date) as sales_month, sum(gross_sales) as monthly_gross_sales from {{raw.nl2sql.amazon_orders}} where product_type = 'Hiking Classic Socks' group by sales_year, sales_month ), YoYSales as ( select a.sales_year as year, a.sales_month as month, a.monthly_gross_sales as current_year_sales, b.monthly_gross_sales as previous_year_sales, ifnull((a.monthly_gross_sales - b.monthly_gross_sales) / b.monthly_gross_sales, 0) as yoy_change from MonthlySales a left join MonthlySales b on a.sales_month = b.sales_month and a.sales_year = b.sales_year + 1 ) select year, month, current_year_sales, previous_year_sales, yoy_change from YoYSales order by year, month;",
+        "result:": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Could you give me the YoY sales by week for the Marketing Category Baselayer?",
+        "query:": "with WeeklySales as ( select extract(year from purchase_date) as sales_year, extract(ISOWEEK from purchase_date) as sales_week, sum(gross_sales) as total_sales from {{raw.nl2sql.amazon_orders}} where product_marketing_category = 'Baselayer' group by sales_year, sales_week ), YoYSales as ( select a.sales_year, a.sales_week, a.total_sales as sales_this_year, b.total_sales as sales_last_year, (a.total_sales - b.total_sales) / b.total_sales as yoy_change from WeeklySales a left join WeeklySales b on a.sales_week = b.sales_week and a.sales_year = b.sales_year + 1 ) select sales_year, sales_week, sales_this_year, sales_last_year, yoy_change from YoYSales order by sales_year, sales_week;",
+        "result:": null 
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What is the YoY sales by Month for the Product Hiking Classic Socks?",
+        "query:": "select sum(gross_sales) as total_sales, sum(units_sold) as total_units_sold from {{raw.nl2sql.amazon_orders}} where product_type = 'Hiking Classic Socks' and purchase_date between date_sub(current_date(), interval 7 day) and date_sub(current_date(), interval 1 day);",
+        "result:": null,
+        "difficulty": "easy"
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the sales of Baselayers in Germany last week?",
+        "query:": "select sum(gross_sales) as total_sales, sum(units_sold) as total_units_sold from {{raw.nl2sql.amazon_orders}} where product_category = 'Baselayers' and market = 'DE' and purchase_date between date_sub(current_date(), interval 7 day) and date_sub(current_date(), interval 1 day);",
+        "result:": null,
+        "difficulty": "easy"
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How did Germany performed last month in comparasion to the year before?",
+        "query:": "WITH GermanySales AS ( SELECT EXTRACT(YEAR FROM purchase_date) AS sales_year, EXTRACT(MONTH FROM purchase_date) AS sales_month, SUM(gross_sales) AS total_sales, SUM(units_sold) AS total_units_sold FROM {{raw.nl2sql.amazon_orders}} WHERE market = 'Germany' AND ( ( purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH) AND LAST_DAY(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)) ) OR ( purchase_date BETWEEN DATE_TRUNC(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 13 month), MONTH) AND LAST_DAY(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 13 month)) ) ) GROUP BY sales_year, sales_month ) SELECT curr.sales_year AS current_year, curr.sales_month AS current_month, curr.total_sales AS current_month_sales, curr.total_units_sold AS current_month_units_sold, previous.sales_year AS previous_year, previous.total_sales AS previous_month_sales, previous.total_units_sold AS previous_month_units_sold, (curr.total_sales - previous.total_sales) AS sales_difference, (curr.total_units_sold - previous.total_units_sold) AS units_sold_difference FROM GermanySales curr JOIN GermanySales previous ON curr.sales_month = previous.sales_month AND curr.sales_year = previous.sales_year + 1 WHERE curr.sales_year = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)) AND previous.sales_year = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 13 MONTH)) AND curr.sales_month = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH));",
+        "result:": null,
+        "difficulty": "hard"
+    }
+]

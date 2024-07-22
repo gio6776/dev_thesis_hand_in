@@ -1,0 +1,18 @@
+CREATE TABLE danish-endurance-analytics.nl2sql.amazon_orders(
+  order_id STRING,
+  purchase_date DATE,
+  buyer_email STRING,
+  market STRING,
+  child_asin STRING,
+  e_conomic_number STRING,
+  product_marketing_category STRING,
+  product_name STRING,
+  product_pack STRING,
+  product_and_pack STRING,
+  product_category STRING,
+  product_type STRING,
+  product_size STRING,
+  product_colour STRING,
+  gross_sales FLOAT,
+  units_sold INTEGER
+);

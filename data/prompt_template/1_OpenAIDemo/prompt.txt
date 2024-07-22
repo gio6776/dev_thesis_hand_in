@@ -1,0 +1,8 @@
+### Generate Google Big Query SQL query only and with no explanation
+### Here is the SQL table , with their properties:
+#
+# {table_schema}
+#
+### {user_question}
+
+

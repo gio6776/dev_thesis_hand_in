@@ -1,0 +1,2710 @@
+id,sql_query,user_question,correctness,question_comment,error_classificaiton,dominant_topic,topic_probability
+6b117751-c4b5-413f-9823-e107b5d6de33,"```sql
+WITH last_year_dates AS (
+  SELECT
+    DATE_TRUNC(purchase_date, YEAR) AS year,
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    year = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+),
+
+weekly_sales AS (
+  SELECT
+    week,
+    product_type,
+    SUM(gross_sales) AS sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) IN (
+      SELECT week FROM last_year_dates
+    )
+  GROUP BY
+    week, product_type
+),
+
+WoW_growth AS (
+  SELECT
+    current.week AS this_week,
+    current.product_type,
+    current.sales AS this_week_sales,
+    previous.sales AS last_week_sales,
+    SAFE_DIVIDE(current.sales - previous.sales, previous.sales) AS WoW_Growth
+  FROM
+    weekly_sales current
+  LEFT JOIN
+    weekly_sales previous
+  ON
+    current.product_type = previous.product_type
+    AND current.week = DATE_ADD(previous.week, INTERVAL 1 WEEK)
+),
+
+max_WoW_growth AS (
+  SELECT
+    product_type,
+    MAX(WoW_Growth) AS max_WoW_Growth
+  FROM
+    WoW_growth
+  GROUP BY
+    product_type
+  ORDER BY
+    max_WoW_Growth DESC
+  LIMIT 1
+)
+
+SELECT * FROM max_WoW_growth
+```",For all products types sold last year which one had the highest WoW?,,,,3,0.8642717
+b8f0f904-0ce9-48d1-8139-d42f8f15107b,"```sql
+SELECT 
+  product_type,
+  SUM(gross_sales) AS total_sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, YEAR) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+GROUP BY 
+  product_type
+ORDER BY 
+  total_sales DESC
+LIMIT 1
+```","For all products types sold last year, which one had the highest sales?",y,,,3,0.8836419
+8e8e66af-1f19-4798-8514-e32ebd2c8c35,"```sql
+WITH weekly_sales AS (
+  SELECT
+    market_alpha_2_code,
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_start,
+    SUM(gross_sales) AS total_sales,
+    SUM(units_sold) AS total_units
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY
+    market_alpha_2_code, week_start
+),
+
+last_week AS (
+  SELECT
+    market_alpha_2_code,
+    week_start,
+    total_sales,
+    total_units
+  FROM
+    weekly_sales
+  WHERE
+    week_start = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+),
+
+previous_week AS (
+  SELECT
+    market_alpha_2_code,
+    week_start,
+    total_sales,
+    total_units
+  FROM
+    weekly_sales
+  WHERE
+    week_start = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 2 WEEK), WEEK(MONDAY))
+),
+
+WoW_growth AS (
+  SELECT
+    lw.market_alpha_2_code,
+    lw.week_start AS last_week_start,
+    pw.week_start AS previous_week_start,
+    lw.total_sales AS last_week_sales,
+    pw.total_sales AS previous_week_sales,
+    lw.total_units AS last_week_units,
+    pw.total_units AS previous_week_units,
+    SAFE_DIVIDE(lw.total_sales - pw.total_sales, pw.total_sales) AS sales_WoW_growth,
+    SAFE_DIVIDE(lw.total_units - pw.total_units, pw.total_units) AS units_WoW_growth
+  FROM
+    last_week lw
+  FULL JOIN
+    previous_week pw ON lw.market_alpha_2_code = pw.market_alpha_2_code
+)
+
+SELECT
+  *
+FROM
+  WoW_growth
+ORDER BY
+  market_alpha_2_code
+```",give me the sales and units sold WoW for each market last week,y,it's performing well WoW,,1,0.8649731
+4e27b11d-3ae6-428c-b93a-73b798d8465d,"```sql
+SELECT 
+  product_category,
+  COUNT(child_asin) / COUNT(DISTINCT order_id) AS average_basket_size
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  EXTRACT(YEAR FROM purchase_date) = 2023
+GROUP BY 
+  product_category
+```",what's the average bastket size by product category of 2023?,y,,,0,0.8651939
+74f00f94-e102-4a47-806e-d4f5bf5f4d2f,"```sql
+SELECT 
+  EXTRACT(YEAR FROM purchase_date) AS year,
+  EXTRACT(MONTH FROM purchase_date) AS month,
+  COUNT(DISTINCT order_id) AS no_orders
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY 
+  year, month
+ORDER BY 
+  no_orders DESC
+LIMIT 
+  1
+```","historically, which month had the highest number of orders?",y,,,4,0.8645912
+a711d629-c004-4185-9235-734d22419633,"```sql
+SELECT 
+  product_marketing_category,
+  child_asin,
+  MAX(purchase_date) AS last_order_date
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY 
+  product_marketing_category, 
+  child_asin
+```",when was the last time an order was made including a product asin for each marketing category?,n,,,2,0.8978601
+1c29d52c-2d95-49c5-80d1-b6e3626827c8,"```sql
+WITH BasketValue AS (
+  SELECT
+    order_id,
+    SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY
+    order_id
+)
+
+SELECT
+  order_id,
+  basket_value
+FROM
+  BasketValue
+ORDER BY
+  basket_value DESC
+LIMIT
+  1
+```","In all orders, which one had the highest basket value?",y,,,1,0.83571434
+6d597cd4-4dd6-4630-8762-e39ae60b508a,"```sql
+SELECT 
+  order_id,
+  MAX(units_sold) as max_units_sold
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, YEAR) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+GROUP BY order_id
+ORDER BY max_units_sold DESC
+LIMIT 1
+```","out of all orders of last year, which one had the highest number of units in one order?",y,,,2,0.88225824
+4c199c24-7b1c-47f4-965e-009c8cec6029,"WITH daily_sales AS (
+  SELECT
+    purchase_date,
+    product_type,
+    SUM(gross_sales) AS total_sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+    AND EXTRACT(MONTH FROM purchase_date) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  GROUP BY
+    purchase_date, product_type
+),
+ranked_sales AS (
+  SELECT
+    purchase_date,
+    product_type,
+    total_sales,
+    RANK() OVER(PARTITION BY purchase_date ORDER BY total_sales DESC) AS rank
+  FROM
+    daily_sales
+)
+SELECT
+  purchase_date,
+  product_type,
+  total_sales
+FROM
+  ranked_sales
+WHERE
+  rank = 1
+ORDER BY
+  purchase_date ASC",what about in terms of sales amount?,n,didnt produce any result,,3,0.7305843
+e645cba3-ad5f-4bd0-80bb-9e3177a2a085,"```sql
+WITH daily_sales AS (
+  SELECT
+    purchase_date,
+    product_type,
+    SUM(units_sold) AS total_units_sold
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+    AND EXTRACT(MONTH FROM purchase_date) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  GROUP BY
+    purchase_date, product_type
+),
+ranked_sales AS (
+  SELECT
+    purchase_date,
+    product_type,
+    total_units_sold,
+    RANK() OVER(PARTITION BY purchase_date ORDER BY total_units_sold DESC) AS rank
+  FROM
+    daily_sales
+)
+SELECT
+  purchase_date,
+  product_type,
+  total_units_sold
+FROM
+  ranked_sales
+WHERE
+  rank = 1
+ORDER BY
+  purchase_date ASC
+```",what was the top sold product type by day of last month?,y,,,0,0.8365022
+4aac56eb-2acf-4bab-af78-f765485cbefa,"```sql
+WITH daily_sales AS (
+  SELECT
+    purchase_date,
+    market_alpha_2_code,
+    SUM(gross_sales) AS total_sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+    AND EXTRACT(MONTH FROM purchase_date) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  GROUP BY
+    purchase_date, market_alpha_2_code
+),
+ranked_sales AS (
+  SELECT
+    purchase_date,
+    market_alpha_2_code,
+    RANK() OVER(PARTITION BY purchase_date ORDER BY total_sales DESC) AS sales_rank
+  FROM
+    daily_sales
+)
+SELECT
+  COUNT(*) AS days_germany_top_market
+FROM
+  ranked_sales
+WHERE
+  market_alpha_2_code = ""DE""
+  AND sales_rank = 1
+```",how many days last month did Germnay was the top market in terms of sales?,y,,,3,0.88063306
+95f89f08-4547-4aee-b9a1-77ad7f5475c0,"```sql
+WITH monthly_sales AS (
+  SELECT
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    market_alpha_2_code,
+    SUM(gross_sales) AS total_sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    EXTRACT(YEAR FROM purchase_date) = 2023
+  GROUP BY
+    year, month, market_alpha_2_code
+),
+ranked_sales AS (
+  SELECT
+    year,
+    month,
+    market_alpha_2_code,
+    RANK() OVER(PARTITION BY year, month ORDER BY total_sales DESC) AS sales_rank
+  FROM
+    monthly_sales
+)
+SELECT
+  COUNT(*) AS months_uk_second_highest_sales
+FROM
+  ranked_sales
+WHERE
+  market_alpha_2_code = ""GB""
+  AND sales_rank = 2
+```",How many months in 2023 does UK had the second highest sales?,n,,,4,0.83784485
+92c87d21-5c66-427f-bb61-764e465d2e35,"```sql
+WITH monthly_sales AS (
+  SELECT
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    market_alpha_2_code,
+    SUM(gross_sales) AS total_sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY
+    year, month, market_alpha_2_code
+),
+ranked_sales AS (
+  SELECT
+    year,
+    month,
+    market_alpha_2_code,
+    RANK() OVER(PARTITION BY year, month ORDER BY total_sales DESC) AS sales_rank
+  FROM
+    monthly_sales
+)
+SELECT
+  COUNT(*) AS months_uk_top_sales
+FROM
+  ranked_sales
+WHERE
+  year = 2024
+  AND market_alpha_2_code = ""GB""
+  AND sales_rank = 1
+```",How many months UK was the top country in terms of sales in 2024?,y,,,3,0.8383945
+7247103d-ea19-44a6-9d28-2df5617cc535,"```sql
+WITH daily_sales AS (
+  SELECT
+    purchase_date,
+    market_alpha_2_code,
+    SUM(gross_sales) AS total_sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
+  GROUP BY
+    purchase_date, market_alpha_2_code
+),
+ranked_sales AS (
+  SELECT
+    purchase_date,
+    market_alpha_2_code,
+    RANK() OVER(PARTITION BY purchase_date ORDER BY total_sales DESC) AS sales_rank
+  FROM
+    daily_sales
+)
+SELECT
+  COUNT(DISTINCT purchase_date) AS days_germany_top_sales
+FROM
+  ranked_sales
+WHERE
+  market_alpha_2_code = ""DE""
+  AND sales_rank = 1
+```",how many days of last year germany figured at the top of saes:,n,wrong result,,2,0.8644903
+70284f37-6742-4df4-ab9c-cd00edf13a76,"```sql
+SELECT 
+  COUNT(DISTINCT purchase_date) AS days_with_sales_over_150k
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE
+  EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
+GROUP BY
+  purchase_date
+HAVING
+  SUM(gross_sales) > 150000
+```",how many days last years had a sales of more then 150k:,n,"wrong results, it gave me a list of 1s and not the actual number of days",,3,0.79838294
+3580ec00-86ea-4617-915f-5b15aec5d808,"```sql
+WITH sales_comparison AS (
+  SELECT
+    purchase_date,
+    SUM(gross_sales) AS total_sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    purchase_date IN (""2024-07-08"", ""2024-07-06"")
+  GROUP BY
+    purchase_date
+)
+
+SELECT
+  a.purchase_date AS date_a,
+  b.purchase_date AS date_b,
+  a.total_sales AS sales_on_date_a,
+  b.total_sales AS sales_on_date_b,
+  a.total_sales - b.total_sales AS sales_difference
+FROM
+  sales_comparison a
+JOIN
+  sales_comparison b
+ON
+  a.purchase_date > b.purchase_date
+```",give me the sales comparasion of 08 july 2024 in comparasion to 06 july 2024,y,,,4,0.8659029
+e0a54cb9-f6f5-4f82-88ff-22930f559753,"```sql
+SELECT 
+  market_alpha_2_code AS market,
+  product_marketing_category,
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY 
+  market,
+  product_marking_category
+ORDER BY 
+  market,
+  product_marketing_category;
+```",give me the sales by market and by product marketing category,n,model refused to answer,,1,0.8642125
+8085e56c-c262-4ead-9f99-d03113f2645c,"```sql
+WITH sales_data AS (
+  SELECT
+    product_marketing_category,
+    product_type,
+    SUM(units_sold) AS total_units_sold
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    DATE_TRUNC(purchase_date, YEAR) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+  GROUP BY
+    product_marketing_category, product_type
+),
+
+ranked_categories AS (
+  SELECT
+    product_marketing_category,
+    SUM(total_units_sold) AS category_units_sold,
+    RANK() OVER(ORDER BY SUM(total_units_sold) DESC) AS category_rank
+  FROM
+    sales_data
+  GROUP BY
+    product_marketing_category
+),
+
+ranked_types AS (
+  SELECT
+    product_type,
+    SUM(total_units_sold) AS type_units_sold,
+    RANK() OVER(ORDER BY SUM(total_units_sold) DESC) AS type_rank
+  FROM
+    sales_data
+  GROUP BY
+    product_type
+)
+
+SELECT
+  c.product_marketing_category,
+  t.product_type
+FROM
+  ranked_categories c
+JOIN
+  ranked_types t ON c.category_rank = 1 AND t.type_rank = 1
+LIMIT 1
+```",what was the most sold product marketing category and the most sold product type lat year,,,,0,0.9098334
+7b9a4229-9e60-40df-8d35-bb7e50093a8c,"```sql
+WITH sales_data AS (
+  SELECT
+    product_marketing_category,
+    product_type,
+    SUM(units_sold) AS total_units_sold
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    DATE_TRUNC(purchase_date, YEAR) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+  GROUP BY
+    product_marketing_category, product_type
+),
+
+category_ranking AS (
+  SELECT
+    product_marketing_category,
+    SUM(total_units_sold) AS category_units_sold,
+    RANK() OVER(ORDER BY SUM(total_units_sold) DESC) AS category_rank
+  FROM
+    sales_data
+  GROUP BY
+    product_marking_category
+),
+
+type_ranking AS (
+  SELECT
+    product_type,
+    SUM(total_units_sold) AS type_units_sold,
+    RANK() OVER(ORDER BY SUM(total_units_sold) DESC) AS type_rank
+  FROM
+    sales_data
+  GROUP BY
+    product_type
+)
+
+SELECT
+  c.product_marketing_category,
+  t.product_type
+FROM
+  category_ranking c
+JOIN
+  type_ranking t ON c.category_rank = 1 AND t.type_rank = 1
+```",what was the most sold product marketing category and the most sold product type lat year,n,error,,0,0.90983504
+66d38aad-c9cd-4893-ae4c-c7015d92c513,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, MONTH) AS month,
+    market_alpha_2_code,
+    product_type,
+    SUM(gross_sales) AS sales
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY month, market_alpha_2_code, product_type
+),
+
+joined_data AS (
+  SELECT
+    ty.month AS this_month,
+    ty.market_alpha_2_code AS market,
+    ty.product_type AS product_type,
+
+    ty.sales AS this_month_sales,
+    ly.sales AS last_month_sales,
+
+    SAFE_DIVIDE(ty.sales - ly.sales, ly.sales) AS MoM_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.month = DATE_ADD(ly.month, INTERVAL 1 MONTH)
+    AND ty.market_alpha_2_code = ly.market_alpha_2_code
+    AND ty.product_type = ly.product_type
+)
+
+SELECT
+  *
+FROM joined_data
+WHERE
+  EXTRACT(YEAR FROM this_month) = 2023
+ORDER BY this_month DESC, market, product_type
+```",Give me the MoM sales by product type for each market in 2023,y,,,3,0.8359833
+064a60c2-3a99-40b0-8b92-8441ef665ac1,"```sql
+SELECT 
+  child_asin,
+  product_marketing_category,
+  SUM(units_sold) AS total_units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  DATE_TRUNC(purchase_date, YEAR) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+GROUP BY 
+  child_asin, product_marketing_category
+ORDER BY 
+  total_units_sold DESC
+LIMIT 1
+```",give me the most sold asin and marketing category last year,n,two separete questions,,0,0.86427593
+a7c55593-514c-47a3-98f3-a6bbd9f742a5,"```sql
+SELECT 
+  product_type,
+  SUM(units_sold) AS total_units_sold
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE EXTRACT(YEAR FROM purchase_date) = 2023
+GROUP BY 
+  product_type
+ORDER BY 
+  total_units_sold DESC
+LIMIT 1
+```",give me the most sold product type in 2023 for all markets,y,,,0,0.8359224
+5d0de257-1bd9-4b25-9073-8d951e26dfad,"```sql
+SELECT 
+  product_marketing_category,
+  SUM(units_sold) AS total_units_sold
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE market_alpha_2_code = ""IT""
+  AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
+GROUP BY 
+  product_marketing_category
+ORDER BY 
+  total_units_sold DESC
+LIMIT 1
+```",Give me the most sold product marketing category in Italy last year,y,,,0,0.88437057
+026248bc-fa5f-4aa6-afd6-54cb71e7c5f0,"```sql
+SELECT 
+  product_name,
+  SUM(units_sold) AS total_units_sold
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE market_alpha_2_code = ""JP""
+  AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
+GROUP BY 
+  product_name
+ORDER BY 
+  total_units_sold DESC
+LIMIT 1
+```",give me the most sold product in japan last year,y,,,0,0.83842117
+c66550b3-fa3e-46f7-9e2b-d63c012822f3,"```sql
+SELECT 
+  product_type,
+  SUM(units_sold) AS units_sold
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+GROUP BY 
+  product_type
+```",give me the units sold for each product type in the previous month,y,,,1,0.88262516
+ff4198ed-cdc5-400b-9e00-3995057c39c8,"```sql
+SELECT 
+  product_marketing_category,
+  SUM(units_sold) AS units_sold
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+GROUP BY 
+  product_marketing_category
+```",give me the units sold for each marketing category in the previous month,,,,1,0.8837837
+498d3033-615f-4f66-bfdd-ec8659bc15c0,"```sql
+WITH weekly_sales_units AS (
+  SELECT
+    market_alpha_2_code,
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_start,
+    SUM(gross_sales) AS total_sales,
+    SUM(units_sold) AS total_units
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY market_alpha_2_code, week_start
+),
+
+previous_week_data AS (
+  SELECT
+    market_alpha_2_code,
+    week_start,
+    total_sales,
+    total_units
+  FROM weekly_sales_units
+  WHERE week_start = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+),
+
+current_week_data AS (
+  SELECT
+    market_alpha_2_code,
+    week_start,
+    total_sales,
+    total_units
+  FROM weekly_sales_units
+  WHERE week_start = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 2 WEEK), WEEK(MONDAY))
+),
+
+wow_growth AS (
+  SELECT
+    c.market_alpha_2_code,
+    c.week_start AS current_week_start,
+    p.week_start AS previous_week_start,
+    c.total_sales AS current_week_sales,
+    p.total_sales AS previous_week_sales,
+    c.total_units AS current_week_units,
+    p.total_units AS previous_week_units,
+    SAFE_DIVIDE(c.total_sales - p.total_sales, p.total_sales) AS sales_growth,
+    SAFE_DIVIDE(c.total_units - p.total_units, p.total_units) AS units_growth
+  FROM current_week_data c
+  FULL JOIN previous_week_data p ON c.market_alpha_2_code = p.market_alpha_2_code
+)
+
+SELECT
+  market_alpha_2_code,
+  current_week_start,
+  previous_week_start,
+  current_week_sales,
+  previous_week_sales,
+  current_week_units,
+  previous_week_units,
+  sales_growth,
+  units_growth
+FROM wow_growth
+ORDER BY market_alpha_2_code
+```",give me wow sales and units for each market of last week,n,,,1,0.8384244
+4e241a73-7f47-4374-83ec-ff93fc076ea5,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Hiking Classic Socks""
+  AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
+GROUP BY 
+  market_alpha_2_code
+```",give me the sales by market for hiking classic socks last year,y,,,3,0.81819135
+b4edb3df-074a-4fdd-850c-d2ea309c9489,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_sales,
+    product_colour,
+    SUM(gross_sales) AS sales
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE product_type = ""Hiking Classic Socks""
+  GROUP BY week_sales, product_colour
+),
+
+joined_data AS (
+  SELECT
+    ty.week_sales AS this_week,
+    ty.product_colour AS product_colour,
+    ty.sales AS this_week_sales,
+    ly.sales AS last_week_sales,
+    SAFE_DIVIDE(ty.sales - ly.sales, ly.sales) AS WoW_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.week_sales = DATE_ADD(ly.week_sales, INTERVAL 1 WEEK)
+    AND ty.product_colour = ly.product_colour
+)
+
+SELECT
+  this_week,
+  product_colour,
+  this_week_sales,
+  last_week_sales,
+  WoW_Growth
+FROM joined_data
+WHERE this_week = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+ORDER BY product_colour
+```",give me the wow sales by product color for hiking classic socks of last week,y,,,1,0.8982829
+469862b9-68b4-44a5-b36b-ca07dfa61f42,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_sales,
+    SUM(gross_sales) AS sales
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY week_sales
+),
+
+joined_data AS (
+  SELECT
+    ty.week_sales AS this_week,
+    ly.week_sales AS last_week,
+    ty.sales AS this_week_sales,
+    ly.sales AS last_week_sales,
+    SAFE_DIVIDE(ty.sales - ly.sales, ly.sales) AS WoW_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.week_sales = DATE_ADD(ly.week_sales, INTERVAL 1 WEEK)
+  ORDER BY this_week DESC
+)
+
+SELECT
+  *
+FROM joined_data
+WHERE this_week = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",give me the wow sales of last week ,y,,,1,0.72943205
+daf9016a-8431-4f28-b804-fcb4db6ba6a4,"```sql
+WITH processed_data AS (
+  SELECT
+    market_alpha_2_code,
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_sales,
+    SUM(gross_sales) AS sales
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE EXTRACT(YEAR FROM purchase_date) = 2023 AND (market_alpha_2_code = ""DE"" OR market_alpha_2_code = ""JP"")
+  GROUP BY week_sales, market_alpha_2_code
+),
+
+joined_data AS (
+  SELECT
+    p.market_alpha_2_code,
+    p.week_sales AS this_week,
+    l.week_sales AS last_week,
+    p.sales AS this_week_sales,
+    l.sales AS last_week_sales,
+    SAFE_DIVIDE(p.sales - l.sales, l.sales) AS WoW_Growth
+  FROM processed_data p
+  FULL JOIN processed_data l
+    ON p.week_sales = DATE_ADD(l.week_sales, INTERVAL 1 WEEK) AND p.market_alpha_2_code = l.market_alpha_2_code
+  ORDER BY p.market_alpha_2_code, this_week DESC
+)
+
+SELECT
+  *
+FROM joined_data
+```",give me wow performance in germany and japan separetly for the whole 2023,n,didnt contain the data for some weeks,,0,0.83928263
+848d9165-bdc9-42d3-91f9-6cae4b8cf723,"```sql
+SELECT 
+  product_colour,
+  SUM(gross_sales) AS total_sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category = ""Baselayer"" AND
+  EXTRACT(YEAR FROM purchase_date) = 2022 AND
+  EXTRACT(MONTH FROM purchase_date) = 2
+GROUP BY 
+  product_colour
+```",give me the sales by color for marketing categories baselayer for februart 2022,y,,,1,0.88463587
+912c947e-8dc8-41d8-b37b-998368223edf,"```sql
+SELECT 
+  product_name,
+  SUM(units_sold) AS total_units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category = ""Male Underwear"" AND
+  purchase_date BETWEEN DATE(""2023-01-15"") AND DATE(""2023-01-21"")
+GROUP BY 
+  product_name
+```",how dis male underwear performed based on units sold on the third week of january?,y,,,0,0.9102202
+8c069329-2e5d-4b45-b27e-264a799c3c01,"```sql
+SELECT 
+  product_name,
+  SUM(gross_sales) AS total_sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category = ""Baselayer"" AND
+  EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR))
+GROUP BY 
+  product_name
+```",how did baselayer performed by product name last year?,y,,,0,0.8347521
+12b4cb67-83cf-4caa-a55a-5eb39cc97e67,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, MONTH) AS month,
+    market_alpha_2_code,
+    SUM(gross_sales) AS revenue
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY month, market_alpha_2_code
+),
+
+joined_data AS (
+  SELECT
+    ty.month AS this_month,
+    ty.market_alpha_2_code AS market,
+    ty.revenue AS this_month_revenue,
+    ly.revenue AS last_month_revenue,
+    SAFE_DIVIDE(ty.revenue - ly.revenue, ly.revenue) AS MoM_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.month = DATE_ADD(ly.month, INTERVAL 1 MONTH)
+    AND ty.market_alpha_2_code = ly.market_alpha_2_code
+)
+
+SELECT
+  *
+FROM joined_data
+ORDER BY this_month DESC, market
+```",Can you give me the revenue per market Month by Month in euros,y,,,4,0.8610061
+24e19b96-60c8-4448-b79f-1656bcb218ee,"```sql
+-- processed_data cte: Group the data by month and market, perform the necessary calculations.
+WITH processed_data as (
+  SELECT
+    DATE_TRUNC(purchase_date, MONTH) as month,
+    market_alpha_2_code,
+    SUM(gross_sales) as revenue
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY month, market_alpha_2_code
+),
+
+-- joined_data cte: FULL Join the data and perform the calculations
+joined_data AS (
+  SELECT
+    ty.month as this_month,
+    ty.market_alpha_2_code as market,
+    ty.revenue as this_month_revenue,
+    ly.revenue as last_month_revenue,
+
+    SAFE_DIVIDE(ty.revenue - ly.revenue, ly.revenue) MoM_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.month = DATE_ADD(ly.month, interval 1 month)
+    AND ty.market_alpha_2_code = ly.market_alpha_2_code
+)
+-- Final Select Statement: Select the data and order by month and market.
+SELECT
+  *
+FROM joined_data
+ORDER BY this_month desc, market
+```",Can you give me the revenue per market Month by Month,y,,,4,0.71908146
+88ef24d6-af5c-4e2b-a9d1-249229bdb896,"```sql
+WITH MonthlyBasketValue AS (
+  SELECT 
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+  FROM 
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE 
+    EXTRACT(YEAR FROM purchase_date) = 2024
+  GROUP BY 
+    year, month
+)
+
+SELECT 
+  year,
+  month,
+  basket_value
+FROM 
+  MonthlyBasketValue
+ORDER BY 
+  basket_value DESC
+LIMIT 
+  1
+```",Which month in 2024 had the highest basket value across markets?,y,,,4,0.45254952
+d12475c2-063d-4a23-8d9d-940809f214d2,"```sql
+WITH MonthlyBasketValue AS (
+  SELECT 
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+  FROM 
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE 
+    EXTRACT(YEAR FROM purchase_date) = 2024
+  GROUP BY 
+    year, month
+)
+
+SELECT 
+  year,
+  month,
+  basket_value
+FROM 
+  MonthlyBasketValue
+ORDER BY 
+  basket_value ASC
+LIMIT 
+  1
+```",which month in 2024 had the lowest basket value across markets?,y,,,0,0.8637028
+23f228b5-30ef-45c8-93fb-b7455b82094a,"```sql
+WITH MarketBasketValue AS (
+  SELECT 
+    market_alpha_2_code,
+    SUM(gross_sales) / COUNT(DISTINCT order_id) AS average_basket_value
+  FROM 
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE 
+    EXTRACT(YEAR FROM purchase_date) = 2024
+  GROUP BY 
+    market_alpha_2_code
+)
+
+SELECT 
+  market_alpha_2_code,
+  average_basket_value
+FROM 
+  MarketBasketValue
+ORDER BY 
+  average_basket_value DESC
+LIMIT 
+  1
+```",Which market had the on average highest basket value in 2024?,,,,1,0.8653036
+8276079a-ff09-4947-961d-ca61d5fa8091,"```sql
+WITH MarketBasketSize AS (
+  SELECT 
+    market_alpha_2_code,
+    COUNT(child_asin) / COUNT(DISTINCT order_id) AS average_basket_size
+  FROM 
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE 
+    EXTRACT(YEAR FROM purchase_date) = 2024
+  GROUP BY 
+    market_alpha_2_code
+)
+
+SELECT 
+  market_alpha_2_code,
+  average_basket_size
+FROM 
+  MarketBasketSize
+ORDER BY 
+  average_basket_size DESC
+LIMIT 
+  1
+```",which market had the highest basket size on average in 2024?,,,,1,0.8653512
+1f343836-ae0a-4ba9-9f79-eda4cc032ede,"```sql
+WITH MonthlyBasketValue AS (
+  SELECT 
+    market_alpha_2_code,
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+  FROM 
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE 
+    EXTRACT(YEAR FROM purchase_date) = 2024
+  GROUP BY 
+    market_alpha_2_code, year, month
+)
+
+SELECT 
+  market_alpha_2_code,
+  year,
+  month,
+  basket_value
+FROM 
+  MonthlyBasketValue
+ORDER BY 
+  basket_value DESC
+LIMIT 
+  1
+```",Which month and market had the highest basket value in 2024?,,,,1,0.8641317
+12f117c7-58e1-4e65-8d3f-321751aa9efa,"```sql
+SELECT 
+  market_alpha_2_code,
+  EXTRACT(YEAR FROM purchase_date) AS year,
+  EXTRACT(MONTH FROM purchase_date) AS month,
+  SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  EXTRACT(YEAR FROM purchase_date) = 2024
+GROUP BY 
+  market_alpha_2_code, year, month
+ORDER BY 
+  market_alpha_2_code, year, month
+```",What was the basket value for each market on Amazon per month in 2024?,,,,0,0.8642765
+d5689bed-1a40-489b-b25f-6347a6537080,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) AND
+  EXTRACT(MONTH FROM purchase_date) = 6
+GROUP BY 
+  market_alpha_2_code
+```",What was the basket value for each market on Amazon in June?,,,,0,0.86528844
+992579f1-c7b8-41e3-a7b8-80f80a005caf,"```sql
+SELECT 
+  market_alpha_2_code,
+  COUNT(child_asin) / COUNT(DISTINCT order_id) AS basket_size
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  EXTRACT(WEEK FROM purchase_date) = 27
+GROUP BY 
+  market_alpha_2_code
+```",What was the basket size for each market on Amazon in week 27?,y,,,0,0.8643006
+0d4d2ce6-4103-4557-acaf-b4c742269aa4,"```sql
+SELECT 
+  COUNT(child_asin) / COUNT(DISTINCT order_id) AS basket_size
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  EXTRACT(WEEK FROM purchase_date) = 27
+```",What was the basket size week 27?,y,,,1,0.79780215
+5853a5d7-9a3a-45ec-91d4-416625177c5c,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_sales,
+    SUM(gross_sales) AS sales
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE product_type = ""Hiking Classic Socks""
+    AND market_alpha_2_code IN (""UK"", ""DE"")
+  GROUP BY week_sales
+),
+
+last_two_weeks AS (
+  SELECT
+    week_sales,
+    sales
+  FROM processed_data
+  WHERE week_sales > DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 2 WEEK), WEEK(MONDAY))
+    AND week_sales <= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+),
+
+joined_data AS (
+  SELECT
+    ty.week_sales AS this_week,
+    ly.week_sales AS last_week,
+    ty.sales AS this_week_sales,
+    ly.sales AS last_week_sales,
+    SAFE_DIVIDE(ty.sales - ly.sales, ly.sales) AS WoW_Growth
+  FROM last_two_weeks ty
+  FULL JOIN last_two_weeks ly
+    ON ty.week_sales = DATE_ADD(ly.week_sales, INTERVAL 1 WEEK)
+  ORDER BY this_week DESC
+)
+
+SELECT
+  *
+FROM joined_data
+```",What was the WoW sales growth for hiking classic socks in the last 2 weeks for UK and Germany?,,,,1,0.5712426
+083c1d6a-0e80-4ca9-b652-548b14850193,"SELECT 
+  market_alpha_2_code,
+  SUM(units_sold) AS total_units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY 
+  market_alpha_2_code
+ORDER BY 
+  total_units_sold DESC
+LIMIT 1;",Which marketplace on Amazon sold the most of the product?,y,,,0,0.838802
+6b559a2c-b713-4bfe-ae2a-13e520e57957,"```sql
+SELECT 
+  product_name,
+  SUM(units_sold) AS total_units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  EXTRACT(WEEK FROM purchase_date) = 27
+GROUP BY 
+  product_name
+ORDER BY 
+  total_units_sold DESC
+LIMIT 1;
+```",Which product sold the most in week 27 on Amazon across marketplaces?,,,,0,0.6132922
+e3514e81-9177-4620-bea8-95b7612dbef2,"```sql
+SELECT 
+  product_colour,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY 
+  product_colour
+ORDER BY 
+  sales ASC
+LIMIT 10
+```",Can you give me top 10 least selling colours,,,,0,0.7310002
+c7293f2b-5261-43ce-975a-b99e8c06f6ee,"```sql
+SELECT 
+  product_size,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY 
+  product_size
+ORDER BY 
+  sales ASC
+LIMIT 10
+```",Can you give me the top 10 least selling sizes ,,,,4,0.73278224
+354cbdaf-df78-4fad-9d8a-00df305cacfa,"SELECT 
+  product_size,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+GROUP BY 
+  product_size
+ORDER BY 
+  sales ASC
+LIMIT 10",can you give me that data in a top 10?,n,Didn't understand the context,,2,0.5973439
+43e7842d-15ae-4880-bd10-c0bd95ba72b6,"```sql
+SELECT 
+  product_size,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+GROUP BY 
+  product_size
+ORDER BY 
+  sales ASC
+LIMIT 1
+```",What is the least selling sizes last month,,,,4,0.79917866
+0d345e3a-02df-4a47-b0b4-7871d96d75ac,"```sql
+SELECT 
+  product_colour,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFYEAR FROM CURRENT_DATE()) - 1 DAY), YEAR)
+  AND purchase_date < DATE_TRUNC(CURRENT_DATE(), YEAR)
+GROUP BY 
+  product_colour
+ORDER BY 
+  sales DESC
+LIMIT 10
+```",What is the top 10 best selling colours year to date,,,,0,0.8653815
+923d35fe-52be-4017-b93a-03f7cd6677c7,"```sql
+SELECT 
+  product_colour,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Polo Shirt""
+  AND DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY 
+  product_colour
+```",What were the sales for men's polo shirt by product colour last week?,,,,4,0.88413006
+3351b536-2d7d-4322-9e69-6cccccc7dffe,"```sql
+SELECT 
+  product_name,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code IN (""UK"", ""DE"")
+  AND DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY 
+  product_name
+```",what was the sales by product name in the UK and Germany last week?,y,Very useful for viewing long lists of products,,0,0.5231801
+98b41f85-b775-4e28-b21b-d5345c0921bc,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_two_weeks_ago
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 2 WEEK), WEEK(MONDAY))
+```",what was the sales 2 weeks ago?,,,,1,0.73024696
+b8966c71-7caa-4cc1-b993-61f29a672b67,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",what was the sales last week?,,,,1,0.72934234
+4e728a0f-6a9f-4a34-8fbe-f0abc3a7b7c2,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",sales last week?,,,,1,0.72938263
+e9203dd5-8192-4c9b-b607-af68e9ee1b40,"```sql
+SELECT 
+  product_colour,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Polo Shirt""
+  AND DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY 
+  product_colour
+```",What were the sales for men's polo shirt by product colour last week?,,,,4,0.8841403
+f12400a6-f98d-4f5e-a8f8-2e33e8fb9665,"SELECT 
+  product_name,
+  SUM(units_sold) AS total_units_sold,
+  SUM(gross_sales) AS total_revenue
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY product_name
+ORDER BY total_units_sold DESC",What are the most sold products sold ever? And their total revenue,,,,3,0.86496896
+64ef2b5a-8981-4b07-92bb-e0e411d4294b,"```sql
+SELECT 
+  product_name,
+  SUM(units_sold) AS total_units_sold
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE EXTRACT(YEAR FROM purchase_date) = 2024
+  AND market_alpha_2_code = ""DE""
+GROUP BY product_name
+ORDER BY total_units_sold DESC
+```",Tell me the most sold products on germany in 2024,,,,0,0.83859134
+ef0d19e4-296f-4787-b5a3-7bbf9ca38ce7,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, MONTH) AS month,
+    market_alpha_2_code,
+    SUM(gross_sales) AS total_sales
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE market_alpha_2_code = ""DE""
+  GROUP BY month, market_alpha_2_code
+),
+
+joined_data AS (
+  SELECT
+    ty.month AS this_month,
+    ly.month AS last_month,
+    ty.total_sales AS this_month_sales,
+    ly.total_sales AS last_month_sales,
+    SAFE_DIVIDE(ty.total_sales - ly.total_sales, ly.total_sales) AS MoM_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.month = DATE_ADD(ly.month, INTERVAL 1 MONTH)
+    AND ty.market_alpha_2_code = ly.market_alpha_2_code
+)
+
+SELECT
+  *
+FROM joined_data
+WHERE EXTRACT(YEAR FROM this_month) BETWEEN 2023 AND 2024
+  AND EXTRACT(MONTH FROM this_month) = 6
+ORDER BY this_month DESC
+```",What's the MoM growth from june 2023 to junto 2024 on Germany,,,,0,0.8396371
+2dc158ce-e347-407d-a440-2f6f1d32f6af,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, MONTH) AS month,
+    SUM(gross_sales) AS total_sales
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY month
+),
+
+joined_data AS (
+  SELECT
+    ty.month AS this_month,
+    ly.month AS last_month,
+    ty.total_sales AS this_month_sales,
+    ly.total_sales AS last_month_sales,
+    SAFE_DIVIDE(ty.total_sales - ly.total_sales, ly.total_sales) AS MoM_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.month = DATE_ADD(ly.month, INTERVAL 1 MONTH)
+)
+
+SELECT
+  *
+FROM joined_data
+WHERE EXTRACT(YEAR FROM this_month) BETWEEN 2023 AND 2024
+ORDER BY this_month DESC
+```",What's the MoM growth between june 2023 and june 2024?,,,,0,0.79957974
+36334fff-c67a-4ba0-bdae-bb51d305f5c0,"```sql
+WITH processed_data as (
+  SELECT
+    DATE_TRUNC(purchase_date, MONTH) as month,
+    SUM(units_sold) as units_sold
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE EXTRACT(YEAR FROM purchase_date) BETWEEN 2023 AND 2024
+  GROUP BY month 
+),
+
+joined_data AS (
+  SELECT
+    ty.month as this_month,
+    ly.month as last_month,
+
+    ty.units_sold as this_month_units_sold,
+    ly.units_sold as last_month_units_sold,
+
+    SAFE_DIVIDE(ty.units_sold - ly.units_sold, ly.units_sold) AS MoM_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.month = DATE_ADD(ly.month, INTERVAL 1 MONTH)
+)
+
+SELECT
+  *
+FROM joined_data
+WHERE EXTRACT(YEAR FROM this_month) BETWEEN 2023 AND 2024
+ORDER BY this_month DESC
+```",What's the MoM growth between 2023 and 2024?,,,,0,0.5969104
+8f459329-a9e5-4b2e-b276-11e56273f23a,"```sql
+SELECT 
+  SUM(gross_sales) AS total_revenue
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE EXTRACT(YEAR FROM purchase_date) = 2024
+```",What's the total revenue for 2024?,,,,3,0.7316215
+e8d4ed62-4050-4976-92d8-7ef452113b99,"SELECT 
+  SUM(gross_sales) AS total_sales
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE EXTRACT(YEAR FROM purchase_date) = 2024",What's the total sales value for 2024?,,,,3,0.7930846
+2b4b4ca1-39aa-4897-9c71-a9b2f415dfb7,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY
+  market_alpha_2_code
+```",How was the sales by market last week?,,,,1,0.7975575
+16c2905f-7b8e-4b26-86d1-723882e9e8cf,"```sql
+SELECT 
+  market_alpha_2_code AS country,
+  SUM(gross_sales) AS sales
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE EXTRACT(YEAR FROM purchase_date) = 2024
+GROUP BY country
+ORDER BY sales DESC
+```",Order it by sales descending,,,,2,0.7959634
+7f0b8eb3-a315-4781-80f9-ed0363bec3ef,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS total_sales
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE EXTRACT(YEAR FROM purchase_date) = 2024
+GROUP BY market_alpha_2_code
+```",What are the total sales in 2024 divided by country?,,,,3,0.8384937
+276916a9-6b55-4c90-a16e-4811475a1d85,"```sql
+SELECT 
+  EXTRACT(MONTH FROM purchase_date) AS month,
+  SUM(gross_sales) AS sales_for_germany_per_month
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code = ""DE""
+  AND EXTRACT(YEAR FROM purchase_date) = 2024
+GROUP BY 
+  month
+ORDER BY 
+  month
+```",Can you give me the sales for Germany per month in 2024,,,,0,0.43186536
+76d2aded-6bc1-4f1b-9933-36c441d45fd9,"SELECT 
+  EXTRACT(YEAR FROM purchase_date) AS year,
+  EXTRACT(MONTH FROM purchase_date) AS month,
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code = ""DE""
+  AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE())
+GROUP BY 
+  year, month
+ORDER BY 
+  year, month",Can you give me that per month,,,,4,0.5958059
+fa27a37c-1671-4550-82c9-40d832b23c89,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_for_germany_this_year
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code = ""DE""
+  AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE())
+```",What is the sales for Germany this year?,,,,0,0.79085165
+7daa254b-bc62-436e-b20d-51a08e378228,"```sql
+SELECT 
+  SUM(gross_sales) AS total_sales_this_year
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE())
+```",What is the total sales this year?,,,,3,0.7970883
+34d95cf5-8655-4306-b632-55589c0f310f,"```sql
+SELECT 
+  market_alpha_2_code AS country,
+  COUNT(child_asin) / COUNT(DISTINCT order_id) AS basket_size
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+GROUP BY 
+  country
+```",Can you give me that value for each country?,n,It doesn't respond to if the trend is going up or down and if it's a positive outcome,,0,0.73035556
+35c8bc3b-7733-47ce-a56b-54c4d886961b,"```sql
+SELECT 
+  AVG(units_sold) AS average_units_per_order
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+```",How many units does a consumer order on average for each order,,,,1,0.86450714
+85c1d82c-7c5e-4dad-8a4e-550ccea3be5c,"```sql
+WITH processed_data AS (
+  SELECT
+    market_alpha_2_code AS country,
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_start,
+    SUM(gross_sales) AS weekly_sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR) AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+  GROUP BY
+    country, week_start
+),
+
+joined_data AS (
+  SELECT
+    curr.country,
+    curr.week_start AS this_week,
+    prev.week_start AS last_week,
+    curr.weekly_sales AS this_week_sales,
+    prev.weekly_sales AS last_week_sales,
+    SAFE_DIVIDE(curr.weekly_sales - prev.weekly_sales, prev.weekly_sales) AS WoW_Growth
+  FROM
+    processed_data curr
+  LEFT JOIN
+    processed_data prev
+    ON curr.country = prev.country
+    AND curr.week_start = DATE_ADD(prev.week_start, INTERVAL 1 WEEK)
+)
+
+SELECT
+  *
+FROM
+  joined_data
+ORDER BY
+  country, this_week DESC
+```",Can you me the sales trend week over week for the whole year per country?,y,"Close, some data is missing but gave what I asked for with more",,0,0.881519
+e02a8a65-6e68-4ed7-8cee-a0efe024a3c8,"```sql
+WITH processed_data AS (
+  SELECT
+    market_alpha_2_code,
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_start,
+    SUM(gross_sales) AS sales
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE
+    purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+  GROUP BY
+    market_alpha_2_code, week_start
+),
+
+joined_data AS (
+  SELECT
+    curr.market_alpha_2_code AS country,
+    curr.week_start AS this_week,
+    prev.week_start AS last_week,
+    curr.sales AS this_week_sales,
+    prev.sales AS last_week_sales,
+    SAFE_DIVIDE(curr.sales - prev.sales, prev.sales) AS WoW_Growth
+  FROM
+    processed_data curr
+  LEFT JOIN
+    processed_data prev
+  ON
+    curr.market_alpha_2_code = prev.market_alpha_2_code
+    AND curr.week_start = DATE_ADD(prev.week_start, INTERVAL 1 WEEK)
+)
+
+SELECT
+  *
+FROM
+  joined_data
+ORDER BY
+  this_week DESC, country
+```",Can you give that week over week for the last 3 month on country level? ,n,It didn't continue in the context of discussion that we were in :-) ,,4,0.86464
+535ca305-7a37-40c3-b0ac-b0969ea38695,"```sql
+SELECT 
+  AVG(basket_value) AS average_basket_value
+FROM (
+  SELECT 
+    buyer_email,
+    SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+  FROM
+    `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+  GROUP BY
+    buyer_email
+)
+```",What is was the average value for a customer last week?,,,,1,0.8390436
+a1161bdd-2cdb-4a3f-ad47-2b11addda9b4,"```sql
+SELECT 
+  SUM(gross_sales) AS last_week_sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",tell me about last weeks sales,,,,1,0.7981257
+d829b7c8-f8f2-425b-ba57-e6335627d997,"```sql
+SELECT 
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Hiking Classic Socks""
+  AND DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",What was the sales of hiking classic socks las week?,,,,1,0.8645282
+c051808b-2416-4bf7-b8f3-7181f788b018,"```sql
+SELECT SUM(units_sold) AS total_units_sold
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE product_marketing_category = ""Baselayer""
+AND EXTRACT(YEAR FROM purchase_date) = 2023
+```",How many units of Baselayer were sold in 2023?,,,,1,0.79785264
+ceacedde-1b53-4311-bc40-b8a9fb2341e3,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) AS week_sales,
+    SUM(gross_sales) AS sales,
+    market_alpha_2_code
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  WHERE market_alpha_2_code = ""DE""
+  GROUP BY week_sales, market_alpha_2_code
+),
+
+joined_data AS (
+  SELECT
+    ty.week_sales AS this_week,
+    ly.week_sales AS last_week,
+    ty.sales AS this_week_sales,
+    ly.sales AS last_week_sales,
+    SAFE_DIVIDE(ty.sales - ly.sales, ly.sales) AS WoW_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly ON DATE_ADD(ly.week_sales, INTERVAL 1 WEEK) = ty.week_sales
+)
+
+SELECT
+  *
+FROM joined_data
+WHERE this_week >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 WEEK)
+ORDER BY this_week DESC
+```",What was the WoW sales in Germany in the last 30 weeks order by descending!,,,,2,0.86409354
+463aabdb-4ecb-4e49-b97f-f2a27eace76a,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_month
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+```",What was the sales last month?,,,,4,0.7280574
+30cf0793-9b23-4298-a911-2ea28d2a7394,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",What was the sales last week?,,,,1,0.7294313
+0fce1fee-6388-419f-9e0b-da9bdd269558,"```sql
+SELECT 
+  SUM(gross_sales) AS total_sales_last_week
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",what was total sales last week?,,,,4,0.7955318
+dfffada8-b5fc-490b-8bce-aafcfa22935e,"```sql
+SELECT
+  EXTRACT(YEAR FROM purchase_date) AS year,
+  EXTRACT(WEEK FROM purchase_date) AS week,
+  SUM(gross_sales) AS weekly_sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE
+  EXTRACT(YEAR FROM purchase_date) = 2024
+GROUP BY
+  year, week
+ORDER BY
+  week ASC;
+```",what wast the sales on weekly basis in 2024?,,,,4,0.83849347
+cc6e29ed-5671-484e-8753-0dc1cb7f7bf7,"```sql
+SELECT 
+  product_colour,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Polo Shirt""
+  AND DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY 
+  product_colour
+```",What were the sales for men's polo shirt by product colour last week?,,,,4,0.8841326
+0607af0e-749b-4ea1-8293-172350590f2a,"```sql
+WITH processed_data AS (
+  SELECT
+    DATE_TRUNC(purchase_date, WEEK(MONDAY)) as week_sales,
+    SUM(gross_sales) as sales
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY week_sales
+),
+
+joined_data AS (
+  SELECT
+    ty.week_sales as this_week,
+    ly.week_sales as last_week,
+    ty.sales as this_week_sales,
+    ly.sales as last_week_sales,
+    SAFE_DIVIDE(ty.sales - ly.sales, ly.sales) as WoW_Growth
+  FROM processed_data ty
+  FULL JOIN processed_data ly
+    ON ty.week_sales = DATE_ADD(ly.week_sales, INTERVAL 1 WEEK)
+)
+
+SELECT
+  *
+FROM joined_data
+WHERE this_week = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+  OR last_week = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 2 WEEK), WEEK(MONDAY))
+ORDER BY this_week DESC
+```",what was the WOw sales growth of last weke? ,,,,2,0.7937875
+7f7ec98f-a019-4ce8-83be-81416de03878,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS sales_last_week
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY market_alpha_2_code
+```",what was the sales last week by market?,,,,1,0.7975447
+3a4467af-cf51-49c7-8aff-afa0753b5852,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_yesterday
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE purchase_date = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",what was the sales yesterday??,,,,3,0.73033756
+2f6f4755-f69f-4999-a961-874a613d80db,"```sql
+SELECT AVG(basket_value) AS average_basket_value
+FROM (
+  SELECT 
+    order_id, 
+    SUM(gross_sales) / COUNT(DISTINCT order_id) AS basket_value
+  FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+  GROUP BY order_id
+)
+```",Give me average of the basket value for orders including all product categories ,,,,0,0.8975265
+7602b44d-ab9c-4ed7-b29a-24f90be32e1c,"```sql
+SELECT 
+  product_colour,
+  product_size,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Bamboo Dress Socks""
+GROUP BY 
+  product_colour, product_size
+ORDER BY 
+  sales DESC
+```","Give me the sales by color and size of the product type 
+Bamboo Dress Socks",,,,1,0.90885687
+7e295343-ab7d-44ab-85c7-87b200d0e38a,"```sql
+SELECT 
+  product_name,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code = ""DE""
+  AND DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY 
+  product_name
+ORDER BY 
+  sales DESC
+LIMIT 1
+```",what was the top product name sold last week in germany?,y,,,0,0.83721083
+91a43292-bbfd-4f33-b987-b3b6d788fb8a,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category = ""Dress Socks""
+  AND DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+GROUP BY 
+  market_alpha_2_code
+```",For dress socks give me the sales by market of last month,,,,1,0.57582563
+8608dabc-d59b-4454-879e-7ebcff3232c6,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category = ""Dress Socks""
+  AND product_pack = ""6-pack""
+  AND market_alpha_2_code IN (""FR"", ""US"")
+  AND DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+GROUP BY 
+  market_alpha_2_code
+ORDER BY 
+  sales DESC
+```","For product pack 6, give me the sales of dress socks in france and usa in the previous month",,,,2,0.9089702
+e4f6ce08-461e-40b9-8142-6a70f428a4e4,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category = ""Dress Socks""
+  AND product_pack = ""6-pack""
+  AND market_alpha_2_code IN (""FR"", ""US"")
+GROUP BY 
+  market_alpha_2_code
+ORDER BY 
+  sales DESC
+```","For product pack 6, give me the sales of dress socks in france and usa",,,,2,0.8831772
+694268c8-05c0-4adc-9400-3cdd52a8221b,"```sql
+SELECT 
+  product_pack,
+  SUM(units_sold) AS units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code = ""DE""
+  AND product_marketing_category = ""Male Underwear""
+  AND DATE_TRUNC(purchase_date, MONTH) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+GROUP BY 
+  product_pack
+ORDER BY 
+  units_sold DESC
+```",For teh country Germany give me units sold by pack for male underwear last month,y,,,0,0.909788
+50c03bb4-37fb-4294-afb0-bb545fa576ff,"```sql
+SELECT 
+  product_pack,
+  SUM(units_sold) AS units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code = ""DE""
+  AND product_marketing_category = ""Male Underwear""
+GROUP BY 
+  product_pack
+ORDER BY 
+  units_sold DESC
+```",For teh country Germany give me units sold by pack for male underwear,,,,0,0.89883816
+95d747fa-794c-4270-b90e-6ec11e46bd6f,"```sql
+SELECT 
+  market_alpha_2_code,
+  SUM(gross_sales) AS sales_amount
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+GROUP BY 
+  market_alpha_2_code
+ORDER BY 
+  sales_amount DESC
+```",Give me the sales of last week by market ordered by sales amount desceding ,y,Correct response and properly structured,,1,0.88474286
+fc800a94-327c-4d47-84c3-e7ecdb1604ea,"```sql
+SELECT 
+  SUM(gross_sales) AS baselayer_sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category = ""Baselayer""
+  AND DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",what about baselayer? how did it perform?,,,,1,0.7329039
+e26ffdcf-2cd9-480a-b007-80006cfb774a,"```sql
+SELECT 
+  purchase_date,
+  SUM(gross_sales) AS daily_sales
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Polo Shirt""
+  AND purchase_date BETWEEN DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 WEEK) 
+  AND DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 DAY)
+GROUP BY 
+  purchase_date
+ORDER BY 
+  purchase_date
+```",what was the sales last week for men's polo shirt on a daily basis?,,,,4,0.6474877
+33004350-2bf1-4d74-b910-1abf6aad6c9a,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",what was the sales last week?,,,,1,0.7294465
+7873bee5-3789-472d-a099-7f363fe5f399,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_year
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, YEAR) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+```",what was the sales last year?,,,,3,0.7280922
+156209ef-0afd-43d4-bf81-b53749654588,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE DATE_TRUNC(purchase_date, WEEK(MONDAY)) = DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY))
+```",what was the sales last week?,,,,1,0.72938097
+919c07f7-9be5-4703-8f60-e6b0a1c23441,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",what was the sales last week?,,,,1,0.7294342
+04882552-8451-487c-9b19-ff5f89b859b6,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_previous_7_days
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",what was the sales for the previous 7 days?,,,,1,0.7961146
+97da949d-a5a9-4b4d-8ffc-847810fd9811,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",what was the sales last week?,,,,1,0.7294386
+5ccfdbfe-8b59-43df-8802-883999233438,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_month
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH) 
+  AND LAST_DAY(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+```",how was the sales last month?,,,,4,0.7280472
+d9763274-ccbc-4cb5-90ad-fa4e6ec060ee,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```","how was the sales last week?
+
+",,,,1,0.72941417
+d0b4ac86-2460-420f-85bf-49c846887bfe,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 DAY)
+```",how was the sales last week?,,,,1,0.7294212
+0f40fee1-e84d-4225-b3a3-ccf2f7acf905,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_yesterday
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",how was the sales yesterday?,,,,3,0.7303184
+12586afa-e483-4c59-8c70-4c85c67d497d,"```sql
+SELECT 
+  SUM(units_sold) AS units_sold_last_week
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",how many units were sold last week?,,,,1,0.7973356
+42011270-d1a0-4ff3-ad73-47db68e8320c,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",how was the sales last week?,,,,1,0.7294437
+2a47fc98-fa66-4560-b742-a83061af28be,"```sql
+SELECT 
+  product_name,
+  SUM(gross_sales) AS total_sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  market_alpha_2_code = ""UK""
+  AND purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR) 
+  AND LAST_DAY(DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR), YEAR)
+GROUP BY 
+  product_name
+ORDER BY 
+  total_sales DESC
+```",Give me the top list of product names that were sold in the UK last year?,,,,4,0.5176742
+dfc3413a-173a-4326-bddb-2d11cad043f4,"```sql
+SELECT 
+  SUM(gross_sales) AS sales_last_week
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",what was the sales last week?,,,,1,0.72943676
+37f2a908-e779-488a-8966-79ff92b21fc9,"```sql
+SELECT 
+  EXTRACT(YEAR FROM purchase_date) AS year,
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_pack = ""3-pack""
+GROUP BY 
+  year
+ORDER BY 
+  year ASC
+```",what about for 3-pack,,,,2,0.59669816
+a3f903c1-de23-4e6f-9a14-803bfbe6f44e,"```sql
+SELECT 
+  EXTRACT(YEAR FROM purchase_date) AS year,
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Sports Trunks"" AND 
+  product_pack = ""6-pack""
+GROUP BY 
+  year
+ORDER BY 
+  year ASC
+```","what was the sales for Men's sports trunks 6-pack grouped by year?
+",,,,0,0.88262844
+b9064d0a-ab9a-48e3-9af2-cf11c7068fe2,"```sql
+SELECT 
+  child_asin,
+  product_name,
+  purchase_date,
+  SUM(gross_sales) AS sales,
+  SUM(units_sold) AS units
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 60 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+GROUP BY 
+  child_asin, 
+  product_name, 
+  purchase_date
+ORDER BY 
+  purchase_date ASC, 
+  child_asin ASC
+```",what was the sales and units by day in the last 60 days by asin and product name? ,,,,1,0.8634574
+5b9f512f-ad4a-4273-a560-4eb596cc8499,"```sql
+SELECT 
+  product_pack,
+  product_colour, 
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Polo Shirt""
+  AND purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 DAY)
+GROUP BY 
+  product_pack, product_colour
+```",what about for men's polo shirt last week by pack and color ,y,,,4,0.86386865
+34e10246-1c7a-4e55-90be-30b4b9cf9b42,"```sql
+SELECT 
+  product_colour, 
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Polo Shirt""
+  AND purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+GROUP BY 
+  product_colour
+```",What were the sales for men's polo shirt by product colour last week?,,,,4,0.884123
+eb6d8404-4ce7-4959-bc83-972a70e552b9,"```sql
+SELECT 
+  purchase_date,
+  child_asin,
+  COUNT(child_asin) AS total_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+GROUP BY 
+  purchase_date, 
+  child_asin
+ORDER BY 
+  purchase_date ASC
+```",give me a list of child asins sold in the last 30 days grouped by day ,,,,3,0.8849691
+b87003d5-aff5-411b-adde-5e692c28bf53,"```sql
+SELECT 
+  product_marketing_category,
+  SUM(units_sold) AS total_units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category IN (""Male Underwear"", ""Baselayer"")
+  AND EXTRACT(YEAR FROM purchase_date) = 2023
+GROUP BY 
+  product_marketing_category
+```",give me the result by each of these products,,,,0,0.73123413
+65531314-1ab4-4200-a304-0163dbc5504d,"```sql
+SELECT 
+  SUM(units_sold) AS total_units_sold
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_marketing_category IN (""Male Underwear"", ""Baselayer"")
+  AND EXTRACT(YEAR FROM purchase_date) = 2023
+```",How many units were sold of Male Underwear and Baselayer in 2023?,,,,0,0.450246
+0d8bcfd6-e0e0-4f05-af88-2a122eb9a9a9,"```sql
+SELECT 
+  product_colour,
+  SUM(gross_sales) AS sales
+FROM 
+  `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE 
+  product_type = ""Men's Polo Shirt""
+  AND purchase_date BETWEEN DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK), WEEK(MONDAY)) 
+  AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+GROUP BY 
+  product_colour
+```","What were the sales for men's polo shirt by product colour last week?
+",y,,,4,0.88412225
+e9bbbdf5-891e-4793-8dda-41a4a50950c1,"```sql
+WITH weekly_sales AS (
+  SELECT
+    market,
+    EXTRACT(WEEK FROM purchase_date) AS week_number,
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    SUM(units_sold) AS units_sold
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY
+    market,
+    week_number,
+    year
+),
+recent_weeks AS (
+  SELECT
+    market,
+    week_number,
+    year,
+    units_sold,
+    RANK() OVER(PARTITION BY market ORDER BY year DESC, week_number DESC) AS rank
+  FROM
+    weekly_sales
+),
+last_two_weeks AS (
+  SELECT
+    market,
+    SUM(units_sold) AS units_sold
+  FROM
+    recent_weeks
+  WHERE
+    rank <= 2
+  GROUP BY
+    market
+),
+week_over_week_growth AS (
+  SELECT
+    a.market,
+    ((b.units_sold - a.units_sold) / a.units_sold) * 100 AS growth_percentage
+  FROM
+    (SELECT * FROM last_two_weeks WHERE rank = 2) a
+  JOIN
+    (SELECT * FROM last_two_weeks WHERE rank = 1) b ON a.market = b.market
+)
+SELECT
+  market,
+  MAX(growth_percentage) AS max_growth_percentage
+FROM
+  week_over_week_growth
+GROUP BY
+  market
+ORDER BY
+  max_growth_percentage DESC
+LIMIT
+  1;
+```",What about the last two weeks specifically?,n,,syntax_error,1,0.7326128
+2be27dcb-9181-410a-929d-2e893812105d,"```sql
+WITH sales_2022 AS (
+  SELECT
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    SUM(units_sold) AS units_sold_2022
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE
+    EXTRACT(YEAR FROM purchase_date) = 2022
+  GROUP BY
+    month
+),
+sales_2023 AS (
+  SELECT
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    SUM(units_sold) AS units_sold_2023
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE
+    EXTRACT(YEAR FROM purchase_date) = 2023
+  GROUP BY
+    month
+)
+SELECT
+  sales_2022.month,
+  sales_2022.units_sold_2022,
+  sales_2023.units_sold_2023
+FROM
+  sales_2022
+FULL OUTER JOIN
+  sales_2023 ON sales_2022.month = sales_2023.month
+ORDER BY
+  sales_2022.month;
+```","What were the units sold by month in 2023, in comparison to the units sold by month in 2022.
+",n,,question_misinterpretation,1,0.8979473
+b68f63af-59b5-4651-a60b-75eca810b2c5,"```sql
+WITH yearly_sales AS (
+  SELECT
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    product_marketing_category,
+    SUM(gross_sales) AS total_sales
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY
+    year, product_marketing_category
+),
+year_over_year_growth AS (
+  SELECT
+    year,
+    product_marketing_category,
+    total_sales,
+    LAG(total_sales) OVER(PARTITION BY product_marketing_category ORDER BY year) AS previous_year_sales,
+    ((total_sales - LAG(total_sales) OVER(PARTITION BY product_marketing_category ORDER BY year)) / LAG(total_sales) OVER(PARTITION BY product_marketing_category ORDER BY year)) * 100 AS growth_percentage
+  FROM
+    yearly_sales
+)
+SELECT
+  product_marketing_category,
+  growth_percentage
+FROM
+  year_over_year_growth
+WHERE
+  year = EXTRACT(YEAR FROM CURRENT_DATE())
+ORDER BY
+  growth_percentage DESC
+LIMIT
+  3;
+```",What are top 3 marketing categories which experienced the most growth in YoY sales this year?,n,,faulty_logic,3,0.6540196
+2d54a101-e4f3-48d2-ac41-0a35a55f2573,"```sql
+WITH yearly_sales AS (
+  SELECT
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    market,
+    SUM(gross_sales) AS total_sales
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY
+    year,
+    market
+),
+year_over_year_growth AS (
+  SELECT
+    year,
+    market,
+    total_sales,
+    LAG(total_sales) OVER(PARTITION BY market ORDER BY year) AS previous_year_sales,
+    ((total_sales - LAG(total_sales) OVER(PARTITION BY market ORDER BY year)) / LAG(total_sales) OVER(PARTITION BY market ORDER BY year)) * 100 AS growth_percentage
+  FROM
+    yearly_sales
+)
+SELECT
+  market,
+  growth_percentage
+FROM
+  year_over_year_growth
+WHERE
+  year = EXTRACT(YEAR FROM CURRENT_DATE())
+ORDER BY
+  growth_percentage DESC
+LIMIT
+  1;
+```",Which market has the highest YoY growth in sales this year so far?,n,,faulty_logic,0,0.47396374
+75856da1-de16-4ef9-a5b3-1f04db4ad312,"```sql
+WITH yearly_sales AS (
+  SELECT
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    market,
+    SUM(gross_sales) AS total_sales
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY
+    year,
+    market
+),
+year_over_year_growth AS (
+  SELECT
+    year,
+    market,
+    total_sales,
+    LAG(total_sales) OVER(PARTITION BY market ORDER BY year) AS previous_year_sales,
+    ((total_sales - LAG(total_sales) OVER(PARTITION BY market ORDER BY year)) / LAG(total_sales) OVER(PARTITION BY market ORDER BY year)) * 100 AS growth_percentage
+  FROM
+    yearly_sales
+)
+SELECT
+  market,
+  growth_percentage
+FROM
+  year_over_year_growth
+WHERE
+  year = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
+ORDER BY
+  growth_percentage DESC
+LIMIT
+  1;
+```",What is the fastest growing market in terms of sales compared to last year?,y,,,3,0.8990151
+1746e7b4-ee52-4261-bcb6-7a8224f51cda,"```sql
+WITH yearly_sales AS (
+  SELECT
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    market,
+    COUNT(order_id) AS total_orders
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY
+    year,
+    market
+),
+year_over_year_growth AS (
+  SELECT
+    year,
+    market,
+    total_orders,
+    LAG(total_orders) OVER(PARTITION BY market ORDER BY year) AS previous_year_orders,
+    ((total_orders - LAG(total_orders) OVER(PARTITION BY market ORDER BY year)) / LAG(total_orders) OVER(PARTITION BY market ORDER BY year)) * 100 AS growth_percentage
+  FROM
+    yearly_sales
+)
+SELECT
+  market,
+  growth_percentage
+FROM
+  year_over_year_growth
+WHERE
+  year = EXTRACT(YEAR FROM CURRENT_DATE())
+ORDER BY
+  growth_percentage DESC
+LIMIT
+  1;
+```",Which market has the highest YoY growth this year so far?,n,,faulty_logic,0,0.83608174
+4d1ea709-ef95-4531-9317-a497dd5c70d1,"```sql
+WITH yearly_sales AS (
+  SELECT
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    market,
+    COUNT(order_id) AS total_orders
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY
+    year,
+    market
+),
+year_over_year_growth AS (
+  SELECT
+    year,
+    market,
+    total_orders,
+    LAG(total_orders) OVER(PARTITION BY market ORDER BY year) AS previous_year_orders,
+    ((total_orders - LAG(total_orders) OVER(PARTITION BY market ORDER BY year)) / LAG(total_orders) OVER(PARTITION BY market ORDER BY year)) * 100 AS growth_percentage
+  FROM
+    yearly_sales
+)
+SELECT
+  market,
+  MAX(growth_percentage) AS max_growth_percentage
+FROM
+  year_over_year_growth
+GROUP BY
+  market
+ORDER BY
+  max_growth_percentage DESC
+LIMIT
+  1;
+```",What is the fastest growing market year over year?,n,,faulty_logic,3,0.8648095
+d92b8b88-4163-4229-bec7-69d7b454e9c7,"```sql
+SELECT 
+  YEAR(purchase_date) AS year,
+  product_marketing_category,
+  SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE product_marketing_category = 'Baselayer'
+  AND purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 2 YEAR) AND CURRENT_DATE()
+GROUP BY year, product_marketing_category
+ORDER BY year ASC;
+```",How did Baselayer's sales in the marketing sector change from last year to this year?,n,,faulty_logic,4,0.89614445
+b91d7077-e11b-49e1-ba35-f5d1f8de208d,"```sql
+SELECT product_marketing_category, SUM(units_sold) AS total_units_sold
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE market = 'Germany'
+GROUP BY product_marketing_category
+ORDER BY total_units_sold DESC
+LIMIT 1;
+```",Which marketing category sold best in Germany?,n,,context_misinterpretation,0,0.86533356
+f095efb4-2662-4428-b5a3-1be69dba730f,"```sql
+SELECT COUNT(*) AS total_orders
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE market = 'Denmark'
+AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE());
+```",How many orders were placed in Denmark this year?,y,,,2,0.8386586
+3324b185-e873-4830-8bdb-ed5f65688177,"```sql
+SELECT SUM(units_sold) AS total_units_sold
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE product_marketing_category = 'Hiking socks'
+AND market = 'Germany'
+AND EXTRACT(YEAR FROM purchase_date) = 2023;
+```",How many Hiking socks did we sell in Germany 2023,n,,schema_linking,0,0.8367805
+e53d3d26-a525-46a8-8a58-4d3867e4350f,"```sql
+SELECT SUM(units_sold) AS total_units_sold
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE product_marketing_category = 'Hiking socks'
+AND market = 'Germany'
+AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
+```",How many Hiking socks did we sell in Germany last year,n,,schema_linking,0,0.86418664
+827b3de7-685c-4f7c-a6e3-3305f112c109,"Your question didn't produce any results. Please, try another question.",What are last weeks sales in Eur,y,,,1,0.73021275
+7bbc22ac-1004-495b-ae78-da64f83332ba,"```sql
+SELECT SUM(units_sold) AS total_units_sold
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE EXTRACT(YEAR FROM purchase_date) = 2023
+AND EXTRACT(MONTH FROM purchase_date) = 1;
+```",How many units were sold in January this year?,n,,faulty_logic,0,0.8378945
+5c097d79-2ce9-4ce8-9427-92991e353515,"```sql
+SELECT SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE market IN ('DE', 'FR', 'IT', 'ES', 'UK', 'NL', 'SE', 'PL')
+AND EXTRACT(YEAR FROM purchase_date) = 2023
+AND EXTRACT(MONTH FROM purchase_date) = 4;
+```",Only include the sales in April from this year,n,,context_misinterpretation,3,0.8374258
+c8a6cefe-a9ae-4734-b270-3b8618d8f837,"```sql
+SELECT SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE market IN ('DE', 'FR', 'IT', 'ES', 'UK', 'NL', 'SE', 'PL')
+AND purchase_date BETWEEN '2023-04-01' AND CURRENT_DATE();
+```",What are the total sales in all european markets in April until today?,n,,faulty_logic,2,0.88380307
+706e944c-8165-4a22-b541-8e28c9bb4698,"```sql
+SELECT SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE product_pack = 1
+AND purchase_date = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",what about for product pack 1?,y,,,2,0.7277366
+83b7e9a4-f04f-4f82-95e0-e8b3bd1abec5,"```sql
+SELECT 
+  SUM(gross_sales) AS total_gross_sales, 
+  SUM(units_sold) AS total_units_sold
+FROM 
+  danish-endurance-analytics.nl2sql.amazon_orders
+WHERE 
+  product_name LIKE '%Organic Compression Socks%'
+  AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  AND EXTRACT(MONTH FROM purchase_date) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+```",What about Organic Compression Socks?,y,,,3,0.799208
+d641c3e8-6547-40d4-b329-05c570d51afe,"```sql
+SELECT 
+  SUM(gross_sales) AS total_gross_sales, 
+  SUM(units_sold) AS total_units_sold
+FROM 
+  danish-endurance-analytics.nl2sql.amazon_orders
+WHERE 
+  product_name = 'Hiking Classic Socks' 
+  AND product_pack = '1-pack'
+  AND EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  AND EXTRACT(MONTH FROM purchase_date) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+```",what about? Hiking Classic Socks 1-pack,n,,,1,0.83245754
+9c49ab67-4ebe-4ab2-ad13-141c93e7848f,"```sql
+WITH sales_ytd AS (
+  SELECT 
+    product_type,
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    SUM(gross_sales) AS total_sales
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE (EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) AND purchase_date <= CURRENT_DATE())
+       OR (EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1 AND purchase_date <= DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAY FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR)) DAY))
+  GROUP BY product_type, year
+),
+sales_comparison AS (
+  SELECT 
+    sy.product_type,
+    sy.year AS current_year,
+    sy.total_sales AS current_sales,
+    LAG(sy.total_sales) OVER(PARTITION BY sy.product_type ORDER BY sy.year) AS previous_sales,
+    (sy.total_sales - LAG(sy.total_sales) OVER(PARTITION BY sy.product_type ORDER BY sy.year)) / LAG(sy.total_sales) OVER(PARTITION BY sy.product_type ORDER BY sy.year) AS yoy_increase
+  FROM sales_ytd sy
+)
+SELECT 
+  product_type,
+  MAX(yoy_increase) AS max_yoy_increase
+FROM sales_comparison
+WHERE current_year = EXTRACT(YEAR FROM CURRENT_DATE())
+GROUP BY product_type
+ORDER BY max_yoy_increase DESC
+LIMIT 1;
+```",Can you make sure that last year's values only include data until 2023-04-16?,n,,faulty_logic,2,0.86567026
+d9f49c74-6651-4787-a04a-4caffcf70c2b,"```sql
+WITH sales_ytd AS (
+  SELECT 
+    product_type,
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    SUM(gross_sales) AS total_sales
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY product_type, year
+),
+sales_comparison AS (
+  SELECT 
+    sy.product_type,
+    sy.year AS current_year,
+    sy.total_sales AS current_sales,
+    LAG(sy.total_sales) OVER(PARTITION BY sy.product_type ORDER BY sy.year) AS previous_sales,
+    (sy.total_sales - LAG(sy.total_sales) OVER(PARTITION BY sy.product_type ORDER BY sy.year)) / LAG(sy.total_sales) OVER(PARTITION BY sy.product_type ORDER BY sy.year) AS yoy_increase
+  FROM sales_ytd sy
+)
+SELECT 
+  product_type,
+  MAX(yoy_increase) AS max_yoy_increase
+FROM sales_comparison
+WHERE current_year = EXTRACT(YEAR FROM CURRENT_DATE())
+GROUP BY product_type
+ORDER BY max_yoy_increase DESC
+LIMIT 1;
+```",Can you use a different alias for the cte sales_ytd in sales_comparison?,n,,faulty_logic,1,0.7999333
+9a256e88-85dc-4915-ba70-70779fa5adc3,"```sql
+WITH sales_ytd AS (
+  SELECT 
+    product_type,
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    SUM(gross_sales) AS total_sales
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY product_type, year
+),
+sales_comparison AS (
+  SELECT 
+    current.product_type,
+    current.year AS current_year,
+    current.total_sales AS current_sales,
+    LAG(current.total_sales) OVER(PARTITION BY current.product_type ORDER BY current.year) AS previous_sales,
+    (current.total_sales - LAG(current.total_sales) OVER(PARTITION BY current.product_type ORDER BY current.year)) / LAG(current.total_sales) OVER(PARTITION BY current.product_type ORDER BY current.year) AS yoy_increase
+  FROM sales_ytd current
+)
+SELECT 
+  product_type,
+  MAX(yoy_increase) AS max_yoy_increase
+FROM sales_comparison
+WHERE current_year = EXTRACT(YEAR FROM CURRENT_DATE())
+GROUP BY product_type
+ORDER BY max_yoy_increase DESC
+LIMIT 1;
+```","What product type has the highest Year over Year increase, measured by the sales year to date vs. last year to date?",n,,syntax_error,3,0.9375481
+f25428b1-d16f-45ce-9a35-faf4ef9fe28e,"```sql
+SELECT DISTINCT purchase_date
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK) AND CURRENT_DATE()
+ORDER BY purchase_date;
+```","This produced a syntax error, try again",n,,syntax_error,0,0.7999121
+be0ff91e-b0ab-42fb-9984-1737a5fdd726,"```sql
+SELECT DISTINCT purchase_date
+FROM `danish-endurance-analytics.nl2sql.amazon_orders`
+WHERE purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL WEEKDAY(CURRENT_DATE())+8 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL WEEKDAY(CURRENT_DATE())+2 DAY)
+ORDER BY purchase_date;
+```","The datest provided range from Wednesday to Tuesday, instead of the previous week from Monday to Sunday. Can you fix this?",n,,faulty_logic,4,0.92689276
+fa314f86-85e9-4900-9eca-d9dc0690065d,"```sql
+SELECT SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE product_marketing_category = 'Baselayers';
+```",what was the sales for the marketing category Baselayers?,n,,context_misinterpretation,1,0.8383675
+b1dbc44b-b40d-4285-b2d6-d8c6df1c4f5e,"```sql
+SELECT product_type, SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE purchase_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
+AND product_marketing_category = 'Hiking Socks'
+AND market = 'UK'
+GROUP BY product_type
+```",how was the sales per product type of the products beloging to the marketing category Hiking Socks in the UK in the past 3 days?,n,,question_misinterpretation,3,0.93193793
+a5ea3d27-274f-47cf-bed5-2f3c7ec6d75f,"```sql
+WITH weekly_sales AS (
+  SELECT
+    product_marketing_category,
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    EXTRACT(WEEK FROM purchase_date) AS week,
+    SUM(gross_sales) AS total_sales
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  GROUP BY
+    product_marketing_category,
+    year,
+    week
+),
+previous_week_sales AS (
+  SELECT
+    *,
+    LAG(total_sales) OVER(PARTITION BY product_marketing_category ORDER BY year, week) AS last_year_week_sales
+  FROM
+    weekly_sales
+),
+year_over_year_growth AS (
+  SELECT
+    product_marketing_category,
+    year,
+    week,
+    ((total_sales - last_year_week_sales) / last_year_week_sales) * 100 AS yoy_growth_percentage
+  FROM
+    previous_week_sales
+  WHERE
+    last_year_week_sales IS NOT NULL
+    AND week = EXTRACT(WEEK FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK))
+    AND year = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR))
+)
+SELECT
+  *
+FROM
+  year_over_year_growth
+ORDER BY
+  product_marketing_category;
+```",what was the YoY growth for the previous week for each product marketing category?,n,,faulty_logic,1,0.88344765
+7deea0d7-1901-4980-af30-2d4bb9e02809,"```sql
+SELECT SUM(units_sold) AS total_units_sold_last_week
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE market = 'US'
+AND purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
+```",how many sales for market US last week?,y,,,1,0.7975662
+5237ed32-ba15-4762-8dd4-cfe2b14d276b,"```sql
+SELECT SUM(units_sold) AS total_units_sold_yesterday
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE purchase_date = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+AND product_name = 'Dress Socks';
+```",how many units were sold yesterday for Dress Socks?,y,,,3,0.669537
+c35cecff-46e6-41e8-94ce-af5e355c46bc,"```sql
+WITH sales_2022 AS (
+  SELECT 
+    product_category,
+    EXTRACT(WEEK(MONDAY) FROM purchase_date) AS week_number,
+    SUM(gross_sales) AS total_sales_2022
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE market = 'UK' AND EXTRACT(YEAR FROM purchase_date) = 2022
+  GROUP BY product_category, week_number
+),
+sales_2023 AS (
+  SELECT 
+    product_category,
+    EXTRACT(WEEK(MONDAY) FROM purchase_date) AS week_number,
+    SUM(gross_sales) AS total_sales_2023
+  FROM danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE market = 'UK' AND EXTRACT(YEAR FROM purchase_date) = 2023
+  GROUP BY product_category, week_number
+)
+SELECT 
+  sales_2023.product_category,
+  sales_2023.week_number,
+  sales_2022.total_sales_2022,
+  sales_2023.total_sales_2023,
+  (sales_2023.total_sales_2023 - sales_2022.total_sales_2022) AS sales_difference,
+  ((sales_2023.total_sales_2023 - sales_2022.total_sales_2022) / sales_2022.total_sales_2022) * 100 AS percentage_change
+FROM sales_2023
+JOIN sales_2022 ON sales_2023.product_category = sales_2022.product_category AND sales_2023.week_number = sales_2022.week_number
+ORDER BY sales_2023.product_category, sales_2023.week_number
+```",give me the YoY sales for all product categories in the market UK for 2023 in comparasion to 2022 on a weekly level (given that the week starts at Monday and ends at Sunday ),n,,faulty_logic,0,0.72940695
+10a68ca5-de84-40eb-921f-df699a21ef9d,"```sql
+SELECT SUM(gross_sales) AS total_sales_last_week
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",what was the sales last week?,n,,question_misinterpretation,1,0.7294408
+cedd6824-4780-440a-9267-cb4a11043205,"```sql
+WITH monthly_sales AS (
+  SELECT
+    product_type,
+    EXTRACT(YEAR FROM purchase_date) AS year,
+    EXTRACT(MONTH FROM purchase_date) AS month,
+    SUM(gross_sales) AS total_sales
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE
+    market = 'UK'
+    AND purchase_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 1 YEAR) AND CURRENT_DATE()
+  GROUP BY
+    product_type, year, month
+),
+year_over_year AS (
+  SELECT
+    product_type,
+    year,
+    month,
+    total_sales,
+    LAG(total_sales) OVER(PARTITION BY product_type ORDER BY year, month) AS prev_year_sales,
+    (total_sales - LAG(total_sales) OVER(PARTITION BY product_type ORDER BY year, month)) / LAG(total_sales) OVER(PARTITION BY product_type ORDER BY year, month) * 100 AS yoy_growth
+  FROM
+    monthly_sales
+)
+SELECT
+  product_type,
+  MAX(yoy_growth) AS max_yoy_growth
+FROM
+  year_over_year
+WHERE
+  month = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  AND year = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+GROUP BY
+  product_type
+ORDER BY
+  max_yoy_growth DESC
+LIMIT
+  1;
+```",What product type had the best YoY performance in the UK last month?,n,,faulty_logic,0,0.46211204
+cf073995-9d13-4d6f-b8b8-fa99300f120b,"```sql
+WITH sales_2023 AS (
+  SELECT
+    SUM(units_sold) AS units_sold_2023
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE
+    product_type = 'Men''s Classic Trunks'
+    AND market = 'Germany'
+    AND EXTRACT(YEAR FROM purchase_date) = 2023
+    AND EXTRACT(MONTH FROM purchase_date) = 1
+),
+sales_2024 AS (
+  SELECT
+    SUM(units_sold) AS units_sold_2024
+  FROM
+    danish-endurance-analytics.nl2sql.amazon_orders
+  WHERE
+    product_type = 'Men''s Classic Trunks'
+    AND market = 'Germany'
+    AND EXTRACT(YEAR FROM purchase_date) = 2024
+    AND EXTRACT(MONTH FROM purchase_date) = 1
+)
+SELECT
+  ((units_sold_2024 - units_sold_2023) / units_sold_2023) * 100 AS yoy_growth_percentage
+FROM
+  sales_2023,
+  sales_2024;
+```","What is the YoY Growth of the product type ""Men's Classic Trunks"" in Germany in January from 2023 to 2024 measured by units sold? ",n,,syntax_error,0,0.9264257
+be8e1d73-a90b-4695-8a44-832307e3e0dc,"Your question didn't produce any results. Please, try another question.",What was the Product category with the highest Year over year growth from 2023 to 2024 Year to date?,n,,syntax_error,0,0.90966797
+efd13fc7-7cf7-4177-8d90-45852556d0fd,"```sql
+SELECT 
+  EXTRACT(YEAR FROM purchase_date) AS year,
+  SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE product_name = 'hiking classic socks'
+  AND EXTRACT(MONTH FROM purchase_date) = 1
+  AND EXTRACT(YEAR FROM purchase_date) IN (2022, 2023)
+GROUP BY year
+ORDER BY year;
+```",what's the YOY sales of hiking classic socks for the month of jan 2023?,n,,schema_linking,1,0.86355495
+e50f5acd-b601-4138-bd01-f03c892d7fcb,"```sql
+SELECT SUM(gross_sales) AS total_sales
+FROM danish-endurance-analytics.nl2sql.amazon_orders
+WHERE product_marketing_category = 'Baselayer'
+AND market = 'UK'
+AND purchase_date = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+```",What's the sales of the marketing category Baselayer in the UK yesterday?,y,,correct,1,0.86428344

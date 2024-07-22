@@ -1,0 +1,422 @@
+[
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the total revenue generated yesterday?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many items were sold in the last month?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Can you provide the average daily sales volume for the previous month?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many different customers we had last week?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many orders were processed two days ago?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the sales last Friday?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Can you report the total number of orders placed during the last weekend?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the average order value in the previous week?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many units were sold last year?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many orders we had last year?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the average basket size for purchases made last Thursday?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many different customers made purchases in the last month?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the average sales amount for customers in the last week?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Can you provide the total units sold during the year?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the average basket value for all orderslast week?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the most popular product category sold last month?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What is the most sold Product Type yesterday?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many units of the most sold product marketing category last week?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many orders did we have from the 16th of Dec 2023 to 18th Dec 2024?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the month with the highest sales last year?",
+        "complexity": "SIMPLE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How did Compression Socks sales perform in the USA market in the previous month?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the sales growth of Hiking Classic Socks in the European market last month?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many units of product product pack = 1 were sold last week?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What's the average basket value in the Canadian market last month?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many units of Headwear were sold in the previous 4 days?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the revenue generated from Dress Socks and Female Underwear last month?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many orders were placed containing Hiking Classic Socks last 2 days?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the sales of Men's Classic Trunks last month?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many units of Men's Merino T-Shirt were sold last year?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What average basket size last month?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the sales of Male Underwear in Italy last 4 days?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What's the average basket size in Poland last 5 days?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Could you give me the sales amount of Male Underwear in the Swedish market for the previous year?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many units and gross sales in the UK market on monthly basis for this year?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How many units and gross sales in the UK market on weekly basis for this year?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How was the sales for B01DBQVR1U in the uk market last week?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Give me the monthly sales for B01DKD3KRS in the japanese market last month",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How was the sales of Anti-Friction Race Socks 2-pack MC (1xBlack, 1xOrange) 43-47 in the previous 4 days?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How was the sales of products in the colour Black last quarter?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How was the sales of products in the colour Black/Big Logo last month?",
+        "complexity": "MODERATE",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Can you provide the YoY sales growth rate for Compression Socks in the USA market by month for the last year?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the WoW units sold change for Hiking Classic Socks in the France during the last month?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How does the YoY units sold of \"product pack = 1\" compare week over week for the past month?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Could you calculate the YoY sales growth for Casual Wear last quarter?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What's the YoY change in average basket value in the Canadian market for the past year, month over month?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Can you show the WoW change in units sold for Headwear in the past month?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the YoY sales growth for Dress Socks and Female Underwear for the month of February?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the YoY growth in units of Hiking Classic Socks in the last month?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What is the YoY sales growth of Male Underwear for each month last year?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Could you provide the YoY and WoW analysis on the number of orders containing Hiking Classic Socks over the last quarter?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How did the units sold of Bamboo Dress Socks compare YoY in the Japanese market during the winter season last year?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the WoW sales performance of Running Wear in the UK and Germany during the last three months?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Can you calculate the YoY growth rate of units sold for Casual Wear in Italy and Spain for each quarter of the previous year?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What is the YoY comparison of average units per order for Sports Socks in the Poland and Netherlands markets during the last six months?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Could you provide the YoY sales comparison for Headwear across the USA and France markets during December last year?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the WoW growth of last week's sales for Headwear in Japan?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "Give me the WoW growth in sales of the week from 25th of March to 31st of March 2024 sales for Headwear in Japan",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "How was the MoM growth in units for the month of April 2023 for Hiking Classic Socks in the market UK",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the Growth in number of orders betweem Dec 2023 and September 2023?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    },
+    {
+        "table_id": "amazon_orders",
+        "question": "What was the YoY growth in number of orders of last week?",
+        "complexity": "COMPLEX",
+        "query": null,
+        "result": null
+    }
+]

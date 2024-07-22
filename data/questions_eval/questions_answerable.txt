@@ -1,0 +1,63 @@
+SIMPLE
+What was the total revenue generated yesterday?
+How many items were sold in the last month?
+Can you provide the average daily sales volume for the previous month?
+How many different customers we had last week?
+How many orders were processed two days ago?
+What was the sales last Friday?
+Can you report the total number of orders placed during the last weekend?
+What was the average order value in the previous week?
+How many units were sold last year?
+How many orders we had last year?
+What was the average basket size for purchases made last Thursday?
+How many different customers made purchases in the last month?
+What was the average sales amount for customers in the last week?
+Can you provide the total units sold during the year?
+What was the average basket value for all orderslast week?
+What was the most popular product category sold last month?
+What is the most sold Product Type yesterday?
+How many units of the most sold product marketing category last week?
+How many orders did we have from the 16th of Dec 2023 to 18th Dec 2024?
+What was the month with the highest sales last year?
+MODERATE
+How did Compression Socks sales perform in the USA market in the previous month?
+What was the sales growth of Hiking Classic Socks in the European market last month?
+How many units of product product pack = 1 were sold last week?
+What's the average basket value in the Canadian market last month?
+How many units of Headwear were sold in the previous 4 days?
+What was the revenue generated from Dress Socks and Female Underwear last month?
+How many orders were placed containing Hiking Classic Socks last 2 days?
+What was the sales of Men's Classic Trunks last month?
+How many units of Men's Merino T-Shirt were sold last year?
+What average basket size last month?
+What was the sales of Male Underwear in Italy last 4 days?
+What's the average basket size in Poland last 5 days?
+Could you give me the sales amount of Male Underwear in the Swedish market for the previous year?
+How many units and gross sales in the UK market on monthly basis for this year?
+How many units and gross sales in the UK market on weekly basis for this year?
+How was the sales for B01DBQVR1U in the uk market last week?
+Give me the monthly sales for B01DKD3KRS in the japanese market last month
+How was the sales of Anti-Friction Race Socks 2-pack MC (1xBlack, 1xOrange) 43-47 in the previous 4 days?
+How was the sales of products in the colour Black last quarter?
+How was the sales of products in the colour Black/Big Logo last month?
+COMPLEX
+Can you provide the YoY sales growth rate for Compression Socks in the USA market by month for the last year?
+What was the WoW units sold change for Hiking Classic Socks in the France during the last month?
+How does the YoY units sold of "product pack = 1" compare week over week for the past month?
+Could you calculate the YoY sales growth for Casual Wear last quarter?
+What's the YoY change in average basket value in the Canadian market for the past year, month over month?
+Can you show the WoW change in units sold for Headwear in the past month?
+What was the YoY sales growth for Dress Socks and Female Underwear for the month of February?
+What was the YoY growth in units of Hiking Classic Socks in the last month?
+What is the YoY sales growth of Male Underwear for each month last year?
+Could you provide the YoY and WoW analysis on the number of orders containing Hiking Classic Socks over the last quarter?
+How did the units sold of Bamboo Dress Socks compare YoY in the Japanese market during the winter season last year?
+What was the WoW sales performance of Running Wear in the UK and Germany during the last three months?
+Can you calculate the YoY growth rate of units sold for Casual Wear in Italy and Spain for each quarter of the previous year?
+What is the YoY comparison of average units per order for Sports Socks in the Poland and Netherlands markets during the last six months?
+Could you provide the YoY sales comparison for Headwear across the USA and France markets during December last year?
+What was the WoW growth of last week's sales for Headwear in Japan?
+Give me the WoW growth in sales of the week from 25th of March to 31st of March 2024 sales for Headwear in Japan
+How was the MoM growth in units for the month of April 2023 for Hiking Classic Socks in the market UK
+What was the Growth in number of orders betweem Dec 2023 and September 2023?
+What was the YoY growth in number of orders of last week?

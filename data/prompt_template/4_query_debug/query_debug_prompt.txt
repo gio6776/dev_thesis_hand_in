@@ -1,0 +1,5 @@
+The Query generated the following error:
+
+{error_message}
+
+Reflect on this errror and provide me another SQL Query

@@ -1,0 +1,4 @@
+Generate Google Big Query SQL query only and with no explanation
+
+Question:
+{user_question}
